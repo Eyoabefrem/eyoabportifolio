@@ -40,26 +40,21 @@ function Modal({p,onClose}){
         <p className="tags">{p.stack.map(s=><span key={s}>{s}</span>)}</p>
         <div className="row"><Ext href={p.live}>View live</Ext><Ext href={p.repo}>View code</Ext></div></div></motion.div></motion.div>}
 
-function Intro({onDone}){
-  const [n,setN]=useState(0)
-  useEffect(()=>{const c=animate(0,100,{duration:1.6,ease:'easeInOut',onUpdate:v=>setN(Math.round(v)),onComplete:()=>setTimeout(onDone,250)});return()=>c.stop()},[onDone])
-  return <motion.div className="intro" exit={{y:'-100%'}} transition={{duration:.9,ease:[.76,0,.24,1]}}>
-    <div className="irow"><Ast className="ia"/><span className="mono">Eyoab Tessera / Portfolio</span></div>
-    <b className="inum">{String(n).padStart(3,'0')}</b></motion.div>}
-
-function Lines({onDone}){
+function Loader({onDone}){
   useEffect(()=>{const t=setTimeout(onDone,2300);return()=>clearTimeout(t)},[onDone])
-  return <motion.div className="guides rl" aria-hidden initial={{opacity:1}} animate={{opacity:[1,1,0]}} transition={{duration:2.3,times:[0,.75,1]}}>
-    {Array.from({length:12},(_,i)=><motion.i key={i} initial={{scaleY:0}} animate={{scaleY:1}} transition={{duration:.8,delay:.5+i*.06,ease:[.76,0,.24,1]}} style={{transformOrigin:i%2?'bottom':'top'}}/>)}</motion.div>}
+  return <motion.div className="loader" exit={{y:'-100%'}} transition={{duration:.85,ease:[.76,0,.24,1]}}>
+    <div className="guides rl" aria-hidden>{Array.from({length:12},(_,i)=><motion.i key={i} initial={{scaleY:0}} animate={{scaleY:1}} transition={{duration:.85,delay:.15+i*.07,ease:[.76,0,.24,1]}} style={{transformOrigin:i%2?'bottom':'top'}}/>)}</div>
+    <motion.div className="lmark" aria-label="ET" initial={{opacity:0,y:30}} animate={{opacity:1,y:0}} transition={{delay:.8,duration:.6}}>ET<Ast className="la"/></motion.div>
+  </motion.div>}
 
 const col=c=>({'--c':c})
 export default function App(){
   const [theme,setTheme]=useState('dark'),[f,setF]=useState('all'),[open,setOpen]=useState(null),[hov,setHov]=useState(null),[copied,setCopied]=useState(false),[guides,setGuides]=useState(false)
-  const [phase,setPhase]=useState(()=>matchMedia('(prefers-reduced-motion: reduce)').matches?'done':sessionStorage.getItem('seen')?'lines':'intro')
-  const done=useCallback(()=>{sessionStorage.setItem('seen','1');setPhase('lines')},[])
-  const linesDone=useCallback(()=>setPhase('done'),[])
+  const [phase,setPhase]=useState(()=>matchMedia('(prefers-reduced-motion: reduce)').matches?'done':'loading')
+  const done=useCallback(()=>setPhase('done'),[])
+  const [menu,setMenu]=useState(false)
   const pre=phase==='done'?'':' pre'
-  useEffect(()=>{document.body.style.overflow=phase==='done'?'':'hidden'},[phase])
+  useEffect(()=>{document.body.style.overflow=phase!=='done'||open||menu?'hidden':''},[phase,open,menu])
   const {scrollYProgress}=useScroll(),bar=useSpring(scrollYProgress,{stiffness:120,damping:24})
   useEffect(()=>{document.documentElement.dataset.theme=theme},[theme])
   useEffect(()=>{const m=e=>{const s=document.documentElement.style;s.setProperty('--mx',e.clientX+'px');s.setProperty('--my',e.clientY+'px')};const k=e=>{if(e.key==='g'&&!/input|textarea/i.test(e.target.tagName))setGuides(v=>!v)};addEventListener('pointermove',m);addEventListener('keydown',k);return()=>{removeEventListener('pointermove',m);removeEventListener('keydown',k)}},[])
@@ -68,15 +63,15 @@ export default function App(){
   const copy=async()=>{try{await navigator.clipboard.writeText(links.email);setCopied(true);setTimeout(()=>setCopied(false),1800)}catch{location.href='mailto:'+links.email}}
   const loop=[...skills,...skills]
   return <>
-    <AnimatePresence>{phase==='intro'&&<Intro onDone={done}/>}</AnimatePresence>
-    {phase==='lines'&&<Lines onDone={linesDone}/>}
+    <AnimatePresence>{phase==='loading'&&<Loader onDone={done}/>}</AnimatePresence>
     <motion.div className="prog" style={{scaleX:bar}}/>
     {guides&&<div className="guides" aria-hidden>{Array.from({length:12},(_,i)=><i key={i}/>)}</div>}
     <header className={"nav g"+pre}><a href="#top" className="logo" style={col('1 / 3')} aria-label="Eyoab Tessera">ET<Ast className="lo"/></a>
       <span className="mono hide" style={col('4 / 7')}><Clock/> / Addis Ababa</span>
       <nav style={col('7 / 13')}><a href="#work">Work</a><a href="#about">About</a><a href="#path">Path</a><a href="#contact">Contact</a>
-        <button onClick={()=>setGuides(v=>!v)} aria-pressed={guides}>Grid</button>
-        <button onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?'Light':'Dark'}</button></nav></header>
+        <button className="gbtn" onClick={()=>setGuides(v=>!v)} aria-pressed={guides}>Grid</button>
+        <button onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?'Light':'Dark'}</button><button className="mbtn" onClick={()=>setMenu(true)}>Menu</button></nav></header>
+    <AnimatePresence>{menu&&<motion.div className="mmenu" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><button className="x" onClick={()=>setMenu(false)}>Close</button>{['work','about','path','contact'].map((k,i)=><a key={k} href={'#'+k} onClick={()=>setMenu(false)}><span className="mono">0{i+2}</span>{k}</a>)}</motion.div>}</AnimatePresence>
     <main id="top" className={pre}>
       <section className="hero g">
         <div style={col('1 / 13')}><motion.h1 initial={{opacity:0,y:40}} animate={phase==='done'?{opacity:1,y:0}:{opacity:0,y:40}} transition={{duration:.8}}>Eyoab<br/>Tessera<Ast className="h1a"/></motion.h1></div>

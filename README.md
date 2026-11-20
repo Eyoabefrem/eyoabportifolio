@@ -11,7 +11,7 @@ A high-performance, responsive personal portfolio website showcasing full-stack 
 
 ## 🌐 Live Demo & Contact
 
-- **Live Site:** [eyoab-portfolio.vercel.app](https://eyoab-portfolio.vercel.app) *(or your deployed Vercel/Netlify URL)*
+- **Live Site:** [eyoab-portfolio.vercel.app](https://eyoabportfolio.vercel.app)
 - **GitHub:** [@Eyoabefrem](https://github.com/Eyoabefrem)
 - **LinkedIn:** [linkedin.com/in/eyoabtessera](https://linkedin.com/in/eyoabtessera)
 - **Email:** [eyoabefrem9@gmail.com](mailto:eyoabefrem9@gmail.com)

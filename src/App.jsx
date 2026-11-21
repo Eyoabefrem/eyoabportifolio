@@ -1,6 +1,6 @@
-import {useState,useEffect,useRef,useCallback} from 'react'
+import {useState,useEffect,useRef,useCallback,useMemo} from 'react'
 import {motion,AnimatePresence,useScroll,useSpring,useInView,animate,useMotionValue,useTransform} from 'framer-motion'
-import {projects,cats,experience,skills,certs,links,about} from './data.js'
+import {projects,cats,experience,skills,certs,links,about,asks,site} from './data.js'
 
 const Logo=({n,s})=><span className="lg"><img src={`https://cdn.simpleicons.org/${s}/ffffff`} alt="" loading="lazy" onError={e=>e.currentTarget.style.display='none'}/>{n}</span>
 const Cover=({p})=><div className="cover" style={{background:`radial-gradient(120% 120% at 100% 0,${p.c[1]}33,transparent 55%),${p.c[0]}`,color:p.c[1]}}>
@@ -14,21 +14,42 @@ function Type({words}){const [i,setI]=useState(0),[t,setT]=useState('')
   useEffect(()=>{const w=words[i%words.length];let k=0,d=false
     const id=setInterval(()=>{if(!d){k++;setT(w.slice(0,k));if(k===w.length){d=true;k=w.length+14}}else{k--;if(k<=w.length)setT(w.slice(0,Math.max(k,0)));if(k<=0){clearInterval(id);setI(x=>x+1)}}},65)
     return()=>clearInterval(id)},[i,words]);return <span className="type">{t}<i/></span>}
-function Clock(){const f=()=>new Date().toLocaleTimeString('en-GB',{timeZone:'Africa/Addis_Ababa',hour:'2-digit',minute:'2-digit'}),[t,setT]=useState(f())
-  useEffect(()=>{const id=setInterval(()=>setT(f()),15000);return()=>clearInterval(id)},[]);return <span>ADD {t}</span>}
+function Clock(){const f=()=>new Date().toLocaleTimeString('en-GB',{timeZone:site.tz,hour:'2-digit',minute:'2-digit'}),[t,setT]=useState(f())
+  useEffect(()=>{const id=setInterval(()=>setT(f()),15000);return()=>clearInterval(id)},[]);return <span>{site.code} {t}</span>}
 
-function Deck({items}){const mx=useMotionValue(0),my=useMotionValue(0)
-  const rx=useSpring(useTransform(my,[-.5,.5],[16,-16]),{stiffness:110,damping:16}),ry=useSpring(useTransform(mx,[-.5,.5],[-24,24]),{stiffness:110,damping:16})
-  const mv=e=>{const b=e.currentTarget.getBoundingClientRect();mx.set((e.clientX-b.left)/b.width-.5);my.set((e.clientY-b.top)/b.height-.5)}
-  return <div className="deck" onPointerMove={mv} onPointerLeave={()=>{mx.set(0);my.set(0)}} aria-hidden>
-    <motion.div className="stack" style={{rotateX:rx,rotateY:ry}}>{items.map((p,i)=><div key={p.id} className="dc" style={{transform:`translateZ(${i*26}px) translate(${i*-16}px,${i*-16}px)`}}><Cover p={p}/></div>)}</motion.div></div>}
+function Stack({list,onOpen}){
+  const [i,setI]=useState(0),touch=useRef(0),n=list.length
+  useEffect(()=>setI(0),[list])
+  const go=useCallback(d=>setI(v=>(v+d+n)%n),[n])
+  useEffect(()=>{
+    if(n<2||matchMedia('(prefers-reduced-motion: reduce)').matches)return
+    const t=setInterval(()=>{if(!document.hidden&&Date.now()-touch.current>6000)go(1)},3500)
+    return()=>clearInterval(t)},[n,go])
+  const bump=()=>{touch.current=Date.now()}
+  if(!n)return null
+  const top=list[i%n],cards=list.map((p,k)=>({p,rank:(k-i+n)%n})).filter(c=>c.rank<4)
+  return <div className="stackw" onPointerDown={bump} onPointerEnter={bump}>
+    <div className="sdeck" tabIndex={0} aria-label="Project deck. Use the arrow keys to browse." onKeyDown={e=>{if(e.key==='ArrowRight'){bump();go(1)}if(e.key==='ArrowLeft'){bump();go(-1)}}}>
+      <AnimatePresence>{cards.map(({p,rank})=><motion.div key={p.id} className="sc" style={{zIndex:10-rank}}
+        initial={{opacity:0,scale:.85,x:40}} animate={{opacity:1,scale:1-rank*.05,x:rank*20,y:rank*-16}} exit={{opacity:0,scale:.85}} transition={{type:'spring',stiffness:260,damping:26}}
+        {...(rank===0?{drag:true,dragSnapToOrigin:true,dragElastic:.7,whileDrag:{scale:1.03},onDragEnd:(e,info)=>{if(Math.abs(info.offset.x)>80||Math.abs(info.velocity.x)>450){bump();go(1)}},onTap:()=>onOpen(p)}:{})}>
+        <Cover p={p}/></motion.div>)}</AnimatePresence>
+    </div>
+    <div className="scap">
+      <motion.div key={top.id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>
+        <p className="mono">{String(i%n+1).padStart(2,'0')} / {String(n).padStart(2,'0')} / drag or tap</p>
+        <b>{top.name}</b><p className="muted">{top.role}</p>
+        <p className="tags">{top.stack.slice(0,4).map(t=><span key={t}>{t}</span>)}</p></motion.div>
+      <div className="snav"><button onClick={()=>{bump();go(-1)}} aria-label="Previous project">←</button><button onClick={()=>{bump();go(1)}} aria-label="Next project">→</button><button onClick={()=>onOpen(top)}>Open</button></div>
+    </div></div>}
 
-const asks=[['Show me the AI work','ai','Gebere and Keya Health: a farming assistant and a health recommender.'],['Any Web3?','web3','The Battle Arena: real-time Battleship with wallet sign-in.'],['How do you handle operations?','ops','Five concept systems in Airtable, Notion and Google Workspace.'],['Apps with their own look','build','Seven products, each with its own brand and design.']]
-function Prompt({onPick}){const [a,setA]=useState(null),[busy,setB]=useState(false)
-  const ask=x=>{setA(null);setB(true);setTimeout(()=>{setB(false);setA(x);setTimeout(()=>onPick(x[1]),1300)},800)}
+const askFor=k=>{const l=projects.filter(p=>k==='all'||p.cats.includes(k)),n=l.map(p=>p.name)
+  return `${l.length} project${l.length===1?'':'s'}: ${n.slice(0,3).join(', ')}${n.length>3?` and ${n.length-3} more`:''}.`}
+function Prompt({active,onAsk,onSeeAll}){const [a,setA]=useState(null),[busy,setB]=useState(false)
+  const ask=x=>{setA(null);setB(true);setTimeout(()=>{setB(false);setA(x);onAsk(x[1])},700)}
   return <div className="prompt"><div className="pbar"><Ast className="sp"/>{busy?<span className="dots"><i/><i/><i/></span>:<span>{a?a[0]:'Ask the portfolio'}</span>}</div>
-    <div className="ans" aria-live="polite">{a&&<motion.p key={a[0]} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>{a[2]}</motion.p>}</div>
-    <div className="asks">{asks.map(x=><button key={x[0]} onClick={()=>ask(x)}>{x[0]}</button>)}</div></div>}
+    <div className="ans" aria-live="polite">{a&&<motion.p key={a[0]} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>{askFor(a[1])}<button className="more" onClick={()=>onSeeAll(a[1])}>See them in Work →</button></motion.p>}</div>
+    <div className="asks">{asks.map(x=><button key={x[0]} className={active===x[1]?'on':''} onClick={()=>ask(x)}>{x[0]}</button>)}</div></div>}
 
 function Modal({p,onClose}){
   useEffect(()=>{const k=e=>e.key==='Escape'&&onClose();addEventListener('keydown',k);return()=>removeEventListener('keydown',k)},[onClose])
@@ -52,7 +73,8 @@ export default function App(){
   const [theme,setTheme]=useState('dark'),[f,setF]=useState('all'),[open,setOpen]=useState(null),[hov,setHov]=useState(null),[copied,setCopied]=useState(false),[guides,setGuides]=useState(false)
   const [phase,setPhase]=useState(()=>matchMedia('(prefers-reduced-motion: reduce)').matches?'done':'loading')
   const done=useCallback(()=>setPhase('done'),[])
-  const [menu,setMenu]=useState(false)
+  const [menu,setMenu]=useState(false),[deckCat,setDeckCat]=useState('all')
+  const deckList=useMemo(()=>projects.filter(p=>deckCat==='all'||p.cats.includes(deckCat)),[deckCat])
   const pre=phase==='done'?'':' pre'
   useEffect(()=>{document.body.style.overflow=phase!=='done'||open||menu?'hidden':''},[phase,open,menu])
   const {scrollYProgress}=useScroll(),bar=useSpring(scrollYProgress,{stiffness:120,damping:24})
@@ -67,25 +89,25 @@ export default function App(){
     <motion.div className="prog" style={{scaleX:bar}}/>
     {guides&&<div className="guides" aria-hidden>{Array.from({length:12},(_,i)=><i key={i}/>)}</div>}
     <header className={"nav g"+pre}><a href="#top" className="logo" style={col('1 / 3')} aria-label="Eyoab Tessera">ET<Ast className="lo"/></a>
-      <span className="mono hide" style={col('4 / 7')}><Clock/> / Addis Ababa</span>
+      <span className="mono hide" style={col('4 / 7')}><Clock/> / {site.place}</span>
       <nav style={col('7 / 13')}><a href="#work">Work</a><a href="#about">About</a><a href="#path">Path</a><a href="#contact">Contact</a>
         <button className="gbtn" onClick={()=>setGuides(v=>!v)} aria-pressed={guides}>Grid</button>
         <button onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?'Light':'Dark'}</button><button className="mbtn" onClick={()=>setMenu(true)}>Menu</button></nav></header>
-    <AnimatePresence>{menu&&<motion.div className="mmenu" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><button className="x" onClick={()=>setMenu(false)}>Close</button>{['work','about','path','contact'].map((k,i)=><a key={k} href={'#'+k} onClick={()=>setMenu(false)}><span className="mono">0{i+2}</span>{k}</a>)}</motion.div>}</AnimatePresence>
+    <AnimatePresence>{menu&&<motion.div className="mmenu" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><button className="x" onClick={()=>setMenu(false)}>Close</button>{['work','about','path','contact'].map((k,i)=><a key={k} href={'#'+k} onClick={()=>setMenu(false)}>{k}</a>)}</motion.div>}</AnimatePresence>
     <main id="top" className={pre}>
       <section className="hero g">
-        <div style={col('1 / 13')}><motion.h1 initial={{opacity:0,y:40}} animate={phase==='done'?{opacity:1,y:0}:{opacity:0,y:40}} transition={{duration:.8}}>Eyoab<br/>Tessera<Ast className="h1a"/></motion.h1></div>
+        <div style={col('1 / 13')}><motion.h1 initial={{opacity:0,y:40}} animate={phase==='done'?{opacity:1,y:0}:{opacity:0,y:40}} transition={{duration:.8}}>{site.name[0]}<br/>{site.name[1]}<Ast className="h1a"/></motion.h1></div>
         <div className="side" style={col('1 / 6')}>
-          <p className="big">I build <Type words={['AI assistants','full-stack apps','Web3 games','ops systems']}/></p>
-          <p className="muted">Full-stack and AI developer in Addis Ababa, <svg className="circ" viewBox="0 0 120 40" aria-hidden><motion.path d="M60 3C20 1 3 14 8 26s45 13 70 8 38-14 28-26S58 -2 40 5" fill="none" stroke="var(--acc)" strokeWidth="2.5" strokeLinecap="round" initial={{pathLength:0}} animate={{pathLength:1}} transition={{duration:1.4,delay:.8}}/></svg><span className="cw">building both sides</span> of a product.</p></div>
-        <div style={col('1 / 6')} className="pw"><Prompt onPick={pick}/></div>
-        <div className="deckw" style={col('7 / 13')}><Deck items={projects.slice(0,6)}/></div>
+          <p className="big">I build <Type words={site.typed}/></p>
+          <p className="muted">{site.heroLine}<svg className="circ" viewBox="0 0 120 40" aria-hidden><motion.path d="M60 3C20 1 3 14 8 26s45 13 70 8 38-14 28-26S58 -2 40 5" fill="none" stroke="var(--acc)" strokeWidth="2.5" strokeLinecap="round" initial={{pathLength:0}} animate={{pathLength:1}} transition={{duration:1.4,delay:.8}}/></svg><span className="cw">{site.heroEm}</span>{site.heroEnd}</p></div>
+        <div style={col('1 / 6')} className="pw"><Prompt active={deckCat} onAsk={setDeckCat} onSeeAll={pick}/></div>
+        <div className="deckw" style={col('7 / 13')}><Stack list={deckList} onOpen={setOpen}/></div>
       </section>
       <div className="marq" aria-label="Toolkit"><div className="track">{loop.map(([n,s],i)=><Logo key={n+i} n={n} s={s}/>)}</div></div>
 
       <section id="work" className="sec work" style={{background:hov?hov.c[0]:'transparent',color:hov?hov.c[1]:'var(--ink)'}}>
-        <div className="g head"><h2 style={col('3 / 13')}>Selected work</h2></div>
-        <div className="chips g"><div style={col('3 / 13')}>{cats.map(([k,l])=><button key={k} className={f===k?'on':''} onClick={()=>setF(k)}>{l}</button>)}</div></div>
+        <div className="g head"><h2 style={col('1 / 13')}>Selected work</h2></div>
+        <div className="chips g"><div style={col('1 / 13')}>{cats.map(([k,l])=><button key={k} className={f===k?'on':''} onClick={()=>setF(k)}>{l}</button>)}</div></div>
         <ul className="idx" onMouseLeave={()=>setHov(null)}>{list.map((p,i)=><li key={p.id} onMouseEnter={()=>setHov(p)} onFocus={()=>setHov(p)}>
           <button className="g" onClick={()=>setOpen(p)}><span className="mono" style={col('1 / 2')}>{String(i+1).padStart(2,'0')}</span><b style={col('2 / 8')}>{p.name}</b><em style={col('8 / 11')}>{p.cats.join(' / ')}</em><span className="mono yr" style={col('11 / 13')}>{p.year} →</span></button></li>)}</ul>
         {hov&&<div className="peek" aria-hidden><Cover p={hov}/></div>}
@@ -97,16 +119,16 @@ export default function App(){
           <div className="stats"><div><b><Count to={projects.length}/></b>projects</div><div><b><Count to={projects.filter(p=>p.cats.includes('build')).length}/></b>full apps</div><div><b><Count to={certs.length}/></b>certificates</div></div></div></section>
 
       <section id="path" className="sec g">
-        <ol className="tl" style={col('3 / 8')}>{experience.map(([t,o,d,x])=><li key={t}><span className="mono">{d}</span><b>{t}</b><span className="muted">{o}</span><p>{x}</p></li>)}</ol>
-        <div style={col('9 / 13')}><p className="mono">Toolkit</p><div className="logos">{skills.map(([n,s])=><Logo key={n} n={n} s={s}/>)}</div>
+        <ol className="tl" style={col('1 / 7')}>{experience.map(([t,o,d,x])=><li key={t}><span className="mono">{d}</span><b>{t}</b><span className="muted">{o}</span><p>{x}</p></li>)}</ol>
+        <div style={col('8 / 13')}><p className="mono">Toolkit</p><div className="logos">{skills.map(([n,s])=><Logo key={n} n={n} s={s}/>)}</div>
         <p className="mono sp2">Certifications</p><ul className="plain">{certs.map(c=><li key={c}>{c}</li>)}</ul></div></section>
 
       <section id="contact" className="sec cta g">
-        <div style={col('3 / 13')}><h2 className="huge">Let’s build<br/>something.</h2>
+        <div style={col('1 / 13')}><h2 className="huge">{site.cta[0]}<br/>{site.cta[1]}</h2>
         <div className="row"><button className="btn" onClick={copy}>{copied?'Copied':'Copy email'}</button>
           <a className="btn ghost" href={'mailto:'+links.email}>Send an email</a>
           <a className="btn ghost" href={links.linkedin} target="_blank" rel="noreferrer">LinkedIn</a>
           <a className="btn ghost" href={links.github}>GitHub</a><a className="btn ghost" href={links.cv}>Download CV</a></div></div></section>
     </main>
-    <footer className="mono">© 2026 Eyoab Efrem Tessera / Addis Ababa, Ethiopia</footer>
+    <footer className="mono">{site.footer}</footer>
     <AnimatePresence>{open&&<Modal p={open} onClose={()=>setOpen(null)}/>}</AnimatePresence></>}

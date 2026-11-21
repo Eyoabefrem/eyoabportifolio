@@ -75,7 +75,7 @@ export default function App(){
     <main id="top" className={pre}>
       <section className="hero g">
         <div style={col('1 / 13')}><motion.h1 initial={{opacity:0,y:40}} animate={phase==='done'?{opacity:1,y:0}:{opacity:0,y:40}} transition={{duration:.8}}>Eyoab<br/>Tessera<Ast className="h1a"/></motion.h1></div>
-        <div className="side" style={col('1 / 6')}><p className="mono">01 / Index</p>
+        <div className="side" style={col('1 / 6')}>
           <p className="big">I build <Type words={['AI assistants','full-stack apps','Web3 games','ops systems']}/></p>
           <p className="muted">Full-stack and AI developer in Addis Ababa, <svg className="circ" viewBox="0 0 120 40" aria-hidden><motion.path d="M60 3C20 1 3 14 8 26s45 13 70 8 38-14 28-26S58 -2 40 5" fill="none" stroke="var(--acc)" strokeWidth="2.5" strokeLinecap="round" initial={{pathLength:0}} animate={{pathLength:1}} transition={{duration:1.4,delay:.8}}/></svg><span className="cw">building both sides</span> of a product.</p></div>
         <div style={col('1 / 6')} className="pw"><Prompt onPick={pick}/></div>
@@ -84,7 +84,7 @@ export default function App(){
       <div className="marq" aria-label="Toolkit"><div className="track">{loop.map(([n,s],i)=><Logo key={n+i} n={n} s={s}/>)}</div></div>
 
       <section id="work" className="sec work" style={{background:hov?hov.c[0]:'transparent',color:hov?hov.c[1]:'var(--ink)'}}>
-        <div className="g head"><p className="mono" style={col('1 / 3')}>02 / Work</p><h2 style={col('3 / 13')}>Selected work</h2></div>
+        <div className="g head"><h2 style={col('3 / 13')}>Selected work</h2></div>
         <div className="chips g"><div style={col('3 / 13')}>{cats.map(([k,l])=><button key={k} className={f===k?'on':''} onClick={()=>setF(k)}>{l}</button>)}</div></div>
         <ul className="idx" onMouseLeave={()=>setHov(null)}>{list.map((p,i)=><li key={p.id} onMouseEnter={()=>setHov(p)} onFocus={()=>setHov(p)}>
           <button className="g" onClick={()=>setOpen(p)}><span className="mono" style={col('1 / 2')}>{String(i+1).padStart(2,'0')}</span><b style={col('2 / 8')}>{p.name}</b><em style={col('8 / 11')}>{p.cats.join(' / ')}</em><span className="mono yr" style={col('11 / 13')}>{p.year} →</span></button></li>)}</ul>
@@ -92,19 +92,16 @@ export default function App(){
       </section>
 
       <section id="about" className="sec g">
-        <p className="mono" style={col('1 / 3')}>03 / About</p>
         <div className="photo" style={col('3 / 7')}><div className="pic">{about.img?<img src={about.img} alt="Eyoab Tessera"/>:<span>ET<small>photo placeholder</small></span>}</div></div>
         <div style={col('8 / 13')}>{about.text.map((t,i)=><p key={t} className={i?'ab':'ab lead'}>{t}</p>)}
           <div className="stats"><div><b><Count to={projects.length}/></b>projects</div><div><b><Count to={projects.filter(p=>p.cats.includes('build')).length}/></b>full apps</div><div><b><Count to={certs.length}/></b>certificates</div></div></div></section>
 
       <section id="path" className="sec g">
-        <p className="mono" style={col('1 / 3')}>04 / Path</p>
         <ol className="tl" style={col('3 / 8')}>{experience.map(([t,o,d,x])=><li key={t}><span className="mono">{d}</span><b>{t}</b><span className="muted">{o}</span><p>{x}</p></li>)}</ol>
         <div style={col('9 / 13')}><p className="mono">Toolkit</p><div className="logos">{skills.map(([n,s])=><Logo key={n} n={n} s={s}/>)}</div>
         <p className="mono sp2">Certifications</p><ul className="plain">{certs.map(c=><li key={c}>{c}</li>)}</ul></div></section>
 
       <section id="contact" className="sec cta g">
-        <p className="mono" style={col('1 / 3')}>05 / Contact</p>
         <div style={col('3 / 13')}><h2 className="huge">Let’s build<br/>something.</h2>
         <div className="row"><button className="btn" onClick={copy}>{copied?'Copied':'Copy email'}</button>
           <a className="btn ghost" href={'mailto:'+links.email}>Send an email</a>
